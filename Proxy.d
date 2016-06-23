@@ -1,1 +1,1 @@
-Proxy.o: Proxy.cpp Proxy.h
+Proxy.o: Proxy.cpp Proxy.h Type.h

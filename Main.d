@@ -1,1 +1,1 @@
-Main.o: Main.cpp Type.h Proxy.h ReadConf.h MemoryPool.h
+Main.o: Main.cpp Type.h Proxy.h ReadConf.h MemoryPool.h Global.h

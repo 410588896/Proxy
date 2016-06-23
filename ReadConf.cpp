@@ -7,7 +7,7 @@
  * Return	:
  * PS		:
 ******************************/
-VOID read_conf(CHAR *port, CHAR *size)
+VOID read_conf(CHAR *port, CHAR *size, CHAR *processes)
 {
 	CHAR buffer[256] = {0};  
 	
@@ -60,8 +60,24 @@ VOID read_conf(CHAR *port, CHAR *size)
 			memcpy(size, p_start, p_end - p_start);
 
 			continue;
-
 		}
+		else if(strstr(buffer, "PROCESSES") != NULL)
+		{
+			CHAR *p_start = NULL;
+			
+			CHAR *p_end = NULL;
+
+			p_start = strstr(buffer, "=");
+			
+			p_start = p_start + 2;
+			
+			p_end = strstr(p_start, ";");
+			
+			memcpy(processes, p_start, p_end - p_start);
+
+			continue;
+		}
+
 	}  
 	in.close(); 
 }
