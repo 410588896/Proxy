@@ -7,6 +7,13 @@
 #include "MemoryPool.h"
 #include "Global.h"
 
+VOID Stop_Server(INT signo)
+{
+	ReleaseMemoryPool(memorypool) ; 
+	printf("\033[1;32;1m########Delete Share Memory and Memory Pool!\n\033[0m");
+	exit(0);
+}
+
 INT main(INT argc, CHAR *argv[])
 {
 //Init
@@ -14,8 +21,9 @@ INT main(INT argc, CHAR *argv[])
 	CHAR proxyport[8] = {0};
 	CHAR memsize[16] = {0};
 	CHAR processes[8] = {0};
-	INT port, mempoolsize, processnum;
-	read_conf(proxyport, memsize, processes);
+	CHAR listen[8] = {0};
+	INT port, mempoolsize, processnum, listennum;
+	read_conf(proxyport, memsize, processes, listen);
 	if(0 == atoi(proxyport))
 		port = DEFAULT_PROXY_PORT;
 	else
@@ -28,28 +36,37 @@ INT main(INT argc, CHAR *argv[])
 		processnum = DEFAULT_PROCESSES;
 	else
 		processnum = atoi(processes);
+	if(0 == atoi(listen))
+		listennum = DEFAULT_LISTEN;
+	else
+		listennum = atoi(listen);
+
 #ifdef DEBUG
-	printf("\033[1;32;1m########Read conf done!\033[0m\n");
+	printf("\033[1;32;1mPORT:%d\nMEMPOOLSIZE:%d\nPROCESSES:%d\nLISTENNUM:%d\n########Read conf done!\033[0m\n", port, mempoolsize, processnum, listennum);
 #endif
 /***************************************************************/
 
 /**************************MEMORY POOL INIT*********************/
-	VOID *memorypool = (VOID*)malloc(sizeof(CHAR) * mempoolsize);
+	memorypool = (VOID*)malloc(sizeof(CHAR) * mempoolsize);
 	PMEMORYPOOL MemoryPool = CreateMemoryPool(memorypool, mempoolsize);
 #ifdef DEBUG
 	printf("\033[1;32;1m########Memory Pool Init done!\033[0m\n");
 #endif
 /***************************************************************/	
-	INT servsock = create_server_socket(port);
+	INT servsock = create_server_socket(port, listennum);
 	if(servsock < 0)
 	{
 #ifdef DEBUG
 		printf("\033[1;32;1m########Server Socket Init failed!\033[0m\n");
 #endif
-	}	
+	}
+#ifdef DEBUG
+	printf("\033[1;32;1m########Server Socket Init successed!\033[0m\n");
+#endif
+	INT pid, ret, child_process_status;	
 	for(INT i = 0; i < processnum; i++)
 	{
-		INT ret = spawn_child();
+		ret = spawn_child(servsock);
 		if(ret == 0)
 			return 0;	//return for child
 		else if(ret == 1)
@@ -60,5 +77,15 @@ INT main(INT argc, CHAR *argv[])
 			alive_process++;
 		}
 	}
+	close(servsock);	
+	signal(SIGINT, Stop_Server);
+	while(pid = wait(&child_process_status) > 0)
+	{
+#ifdef DEBUG
+		printf("\033[1;32;1m########pid = %d\n\033[0m", pid);
+#endif
+		sleep(10);
+	}
+	return 0;
 }
 

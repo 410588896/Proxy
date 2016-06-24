@@ -2,12 +2,17 @@
 
 VOID start_worker_process()
 {
-
+	while(1)
+	{
+		printf("heheda\n");
+		sleep(10);
+	}
 }
 
-INT spawn_child()
+INT spawn_child(INT servsock)
 {
-	pid_t child;	
+	pid_t child;
+	child = fork();	
 	if(child < 0)
 	{
 #ifdef LOG
@@ -23,11 +28,12 @@ INT spawn_child()
 	else			//in parent
 	{
 		//do some communication with child
+		printf("%d\n",child);
 		return 1;
 	}
 }
 
-INT create_server_socket(INT port) 
+INT create_server_socket(INT port, INT listennum) 
 {
 	INT server_sock, optval;
 	struct sockaddr_in server_addr;
@@ -36,6 +42,9 @@ INT create_server_socket(INT port)
 		return SERVER_SOCKET_ERROR;
 
 	if (setsockopt(server_sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0) 
+		return SERVER_SETSOCKOPT_ERROR;
+	
+	if(fcntl(server_sock, F_SETFL, O_NONBLOCK) < 0)
 		return SERVER_SETSOCKOPT_ERROR;
 
 	memset(&server_addr, 0, sizeof(server_addr));
@@ -46,7 +55,7 @@ INT create_server_socket(INT port)
 	if (bind(server_sock, (struct sockaddr*)&server_addr, sizeof(server_addr)) != 0) 
 		return SERVER_BIND_ERROR;
 
-	if (listen(server_sock, 20) < 0) 
+	if (listen(server_sock, listennum) < 0) 
 		return SERVER_LISTEN_ERROR;
 
 	return server_sock;

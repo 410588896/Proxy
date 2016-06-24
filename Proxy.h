@@ -9,6 +9,11 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <netinet/in.h> 
+#include <fcntl.h>
+#include <sys/epoll.h>
+#include <sys/wait.h>
+#include <sys/types.h>
+#include <wait.h>
 
 #include "Type.h"
 
@@ -16,6 +21,7 @@
 #define HTTP_PORT 80
 #define DEFAULT_MEMPOOL_SIZE 10240000
 #define DEFAULT_PROCESSES 16
+#define DEFAULT_LISTEN 512
 #define SERVER_SOCKET_ERROR -1
 #define SERVER_SETSOCKOPT_ERROR -2
 #define SERVER_BIND_ERROR -3
@@ -26,9 +32,9 @@
 
 #define LOG(fmt...)  do { fprintf(stderr,"%s %s ",__DATE__,__TIME__); fprintf(stderr, ##fmt); } while(0)
 
-INT create_server_socket(INT port);
+INT create_server_socket(INT port, INT listennum);
 
-INT spawn_child();
+INT spawn_child(INT servsock);
 
 VOID start_worker_process();
 

@@ -9,6 +9,6 @@
 
 #include "Type.h"
 
-VOID read_conf(CHAR *port, CHAR *size, CHAR *processes);
+VOID read_conf(CHAR *port, CHAR *size, CHAR *processes, CHAR *listen);
 
 #endif

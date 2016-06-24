@@ -5,4 +5,6 @@
 
 INT alive_process = 0;
 
+VOID *memorypool;
+
 #endif
