@@ -22,8 +22,9 @@ INT main(INT argc, CHAR *argv[])
 	CHAR memsize[16] = {0};
 	CHAR processes[8] = {0};
 	CHAR listen[8] = {0};
-	INT port, mempoolsize, processnum, listennum;
-	read_conf(proxyport, memsize, processes, listen);
+	CHAR events[8] = {0};
+	INT port, mempoolsize, processnum, listennum, eventsnum;
+	read_conf(proxyport, memsize, processes, listen, events);
 	if(0 == atoi(proxyport))
 		port = DEFAULT_PROXY_PORT;
 	else
@@ -40,9 +41,13 @@ INT main(INT argc, CHAR *argv[])
 		listennum = DEFAULT_LISTEN;
 	else
 		listennum = atoi(listen);
+	if(0 == atoi(events))
+		eventsnum = DEFAULT_EVENTS_NUM;
+	else
+		eventsnum = atoi(events);
 
 #ifdef DEBUG
-	printf("\033[1;32;1mPORT:%d\nMEMPOOLSIZE:%d\nPROCESSES:%d\nLISTENNUM:%d\n########Read conf done!\033[0m\n", port, mempoolsize, processnum, listennum);
+	printf("\033[1;32;1mPORT:%d\nMEMPOOLSIZE:%d\nPROCESSES:%d\nLISTENNUM:%d\nEVENTSNUM:%d\n########Read conf done!\033[0m\n", port, mempoolsize, processnum, listennum, eventsnum);
 #endif
 /***************************************************************/
 
@@ -63,10 +68,10 @@ INT main(INT argc, CHAR *argv[])
 #ifdef DEBUG
 	printf("\033[1;32;1m########Server Socket Init successed!\033[0m\n");
 #endif
-	INT pid, ret, child_process_status;	
+	INT pid, ret, status;	
 	for(INT i = 0; i < processnum; i++)
 	{
-		ret = spawn_child(servsock);
+		ret = spawn_child(servsock, eventsnum);
 		if(ret == 0)
 			return 0;	//return for child
 		else if(ret == 1)
@@ -79,10 +84,22 @@ INT main(INT argc, CHAR *argv[])
 	}
 	close(servsock);	
 	signal(SIGINT, Stop_Server);
-	while(pid = wait(&child_process_status) > 0)
+	while(pid = wait(&status) > 0)
 	{
 #ifdef DEBUG
-		printf("\033[1;32;1m########pid = %d\n\033[0m", pid);
+		if(WIFEXITED(status))
+		{
+			printf("child exit: <%d> exit, normal termination, exit status = %d\n", pid, WEXITSTATUS(status));
+		}
+		else if(WIFSIGNALED(status))
+		{
+			printf("child exit: <%d> exit, abnormal termination, signal number = %d%s\n", pid, WTERMSIG(status), "");
+		}
+		else if(WIFSTOPPED(status))
+		{
+			printf("child exit: <%d> exit, child stopped, signal number = %d\n", pid, WSTOPSIG(status));
+		}		
+		printf("\033[1;32;1m########pid = %d\n\033[0m\n", pid);
 #endif
 		sleep(10);
 	}

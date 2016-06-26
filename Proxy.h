@@ -14,14 +14,18 @@
 #include <sys/wait.h>
 #include <sys/types.h>
 #include <wait.h>
+#include <netdb.h>
+#include <map>
 
 #include "Type.h"
 
 #define DEFAULT_PROXY_PORT 8080
 #define HTTP_PORT 80
 #define DEFAULT_MEMPOOL_SIZE 10240000
+#define MAXLEN 1024
 #define DEFAULT_PROCESSES 16
 #define DEFAULT_LISTEN 512
+#define DEFAULT_EVENTS_NUM 64
 #define SERVER_SOCKET_ERROR -1
 #define SERVER_SETSOCKOPT_ERROR -2
 #define SERVER_BIND_ERROR -3
@@ -32,11 +36,15 @@
 
 #define LOG(fmt...)  do { fprintf(stderr,"%s %s ",__DATE__,__TIME__); fprintf(stderr, ##fmt); } while(0)
 
+using namespace std;
+
 INT create_server_socket(INT port, INT listennum);
 
-INT spawn_child(INT servsock);
+INT spawn_child(INT servsock, INT eventsnum);
 
-VOID start_worker_process();
+VOID start_worker_process(INT servsock, INT eventsnum);
+
+INT connect_isolate(CHAR *host, INT port);
 
 #endif
 
