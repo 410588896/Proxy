@@ -27,6 +27,42 @@ static INT make_socket_non_blocking (INT sfd)
 	return 0;  
 }  
 
+INT connect_isolate(CHAR *host, INT port)
+{
+	INT sockfd;    
+    struct hostent *he;    
+    struct sockaddr_in server;
+    
+    if((he = gethostbyname(host)) == NULL)
+    {
+#ifdef DEBUG
+        printf("gethostbyname() error\n");
+#endif 
+		return 0;
+    }
+    
+    if((sockfd=socket(AF_INET, SOCK_STREAM, 0)) == -1)
+    {
+#ifdef DEBUG
+        printf("socket() error\n");
+#endif
+		return 0;
+    }
+    bzero(&server,sizeof(server));
+    server.sin_family = AF_INET;
+    server.sin_port = htons(port);
+    server.sin_addr = *((struct in_addr *)he->h_addr);
+    if(connect(sockfd, (struct sockaddr *)&server, sizeof(server)) == -1)
+    {
+#ifdef DEBUG
+		printf("connect() error\n");
+#endif        
+		return 0;
+	}
+
+	return sockfd;
+}
+
 VOID start_worker_process(INT servsock, INT eventsnum)
 {
 	INT efd, ret;
@@ -150,7 +186,7 @@ VOID start_worker_process(INT servsock, INT eventsnum)
 				   completely, as we are running in edge-triggered mode 
 				   and won't get a notification again for the same 
 				   data. */  
-				INT done = 0;  
+				INT done = 0, flag = 0, remotesock;  
 				ssize_t count;  
 				CHAR head[MAXLEN];  
 				CHAR *hosttmp, *tmp;
@@ -189,9 +225,75 @@ VOID start_worker_process(INT servsock, INT eventsnum)
 #ifdef DEBUG
 					printf("######Host:%s,Port:%d\n", host, port);
 #endif
-					INT remotesock = connect_isolate(host, port);
+					remotesock = connect_isolate(host, port);
+					if(remotesock == 0)
+					{
+						close(events[i].data.fd);
+						continue;
+					}
+					event.data.fd = remotesock;  
+					event.events = EPOLLIN | EPOLLET;  
+					ret = epoll_ctl(efd, EPOLL_CTL_ADD, remotesock, &event);  
+					if(ret == -1)  
+					{  
+#ifdef DEBUG
+						printf("Epoll_Ctl Error!\n");  
+#endif
+						close(remotesock);
+						continue;	
+					}  
+					sockfd_map[remotesock] = events[i].data.fd;
+					sockfd_map[events[i].data.fd] = remotesock;
+					flag = 1;
+					ret = write(remotesock, head, count);
+					if(ret == -1)
+					{
+						epoll_ctl(efd, EPOLL_CTL_DEL, events[i].data.fd, &events[i]);
+						epoll_ctl(efd, EPOLL_CTL_DEL, remotesock, &events[i]);  
+						close(events[i].data.fd);  
+						close(remotesock);
+						map<INT, INT>::iterator pos = sockfd_map.find(events[i].data.fd);
+						if(pos != sockfd_map.end())
+						{
+							sockfd_map.erase(pos);
+						}	
+						pos = sockfd_map.find(remotesock);
+						if(pos != sockfd_map.end())
+						{
+							sockfd_map.erase(pos);
+						}
+#ifdef DEBUG
+						printf("write error!\n");
+#endif
+						break;
+					}
 				}
+				else
+				{
+					ret = write(sockfd_map[events[i].data.fd], head, count);
+					if(ret == -1)
+					{
+						epoll_ctl(efd, EPOLL_CTL_DEL, events[i].data.fd, &events[i]);
+						epoll_ctl(efd, EPOLL_CTL_DEL, sockfd_map[events[i].data.fd], &events[i]);  
+						close(events[i].data.fd);  
+						close(sockfd_map[events[i].data.fd]);
+						map<INT, INT>::iterator pos = sockfd_map.find(events[i].data.fd);
+						if(pos != sockfd_map.end())
+						{
+							sockfd_map.erase(pos);
+						}	
+						pos = sockfd_map.find(sockfd_map[events[i].data.fd]);
+						if(pos != sockfd_map.end())
+						{
+							sockfd_map.erase(pos);
+						}
+#ifdef DEBUG
+						printf("write error!\n");
+#endif
+						break;
+					}
 
+				}
 				while (1)  
 				{  
 					ssize_t count;  
@@ -227,16 +329,83 @@ VOID start_worker_process(INT servsock, INT eventsnum)
 						printf("print error!\n");  
 					}
 #endif	
+					if(flag == 1)
+					{
+						ret = write(remotesock, buf, count);
+						if(ret == -1)
+						{
+							epoll_ctl(efd, EPOLL_CTL_DEL, events[i].data.fd, &events[i]);
+							epoll_ctl(efd, EPOLL_CTL_DEL, remotesock, &events[i]);  
+							close(events[i].data.fd);  
+							close(remotesock);
+							map<INT, INT>::iterator pos = sockfd_map.find(events[i].data.fd);
+							if(pos != sockfd_map.end())
+							{
+								sockfd_map.erase(pos);
+							}	
+							pos = sockfd_map.find(remotesock);
+						   	if(pos != sockfd_map.end())
+							{
+								sockfd_map.erase(pos);
+							}
+#ifdef DEBUG
+							printf("write error!\n");
+#endif
+							break;
+						}
+					}
+					else
+					{
+						ret = write(sockfd_map[events[i].data.fd], buf, count);
+						if(ret == -1)
+						{
+							epoll_ctl(efd, EPOLL_CTL_DEL, events[i].data.fd, &events[i]);
+							epoll_ctl(efd, EPOLL_CTL_DEL, sockfd_map[events[i].data.fd], &events[i]);  
+							close(events[i].data.fd);  
+							close(sockfd_map[events[i].data.fd]);
+							map<INT, INT>::iterator pos = sockfd_map.find(events[i].data.fd);
+							if(pos != sockfd_map.end())
+							{
+								sockfd_map.erase(pos);
+							}	
+							pos = sockfd_map.find(sockfd_map[events[i].data.fd]);
+						   	if(pos != sockfd_map.end())
+							{
+								sockfd_map.erase(pos);
+							}
+#ifdef DEBUG
+							printf("write error!\n");
+#endif
+							break;
+						}
+					}
 				}  
 
 				if (done)  
 				{  
+#ifdef DEBUG
 					printf("Closed connection on descriptor %d\n",  
 							events[i].data.fd);  
-
+#endif
 					/* Closing the descriptor will make epoll remove it 
 					   from the set of descriptors which are monitored. */  
-					close(events[i].data.fd);  
+					if(flag == 0)
+					{
+						epoll_ctl(efd, EPOLL_CTL_DEL, events[i].data.fd, &events[i]);
+						epoll_ctl(efd, EPOLL_CTL_DEL, sockfd_map[events[i].data.fd], &events[i]);
+						close(events[i].data.fd);  
+						close(sockfd_map[events[i].data.fd]);
+						map<INT, INT>::iterator pos = sockfd_map.find(events[i].data.fd);
+						if(pos != sockfd_map.end())
+						{
+							sockfd_map.erase(pos);
+						}	
+						pos = sockfd_map.find(sockfd_map[events[i].data.fd]);
+						if(pos != sockfd_map.end())
+						{
+							sockfd_map.erase(pos);
+						}
+					}
 				}  
 			}  
 		}  
