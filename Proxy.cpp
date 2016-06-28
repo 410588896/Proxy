@@ -107,6 +107,7 @@ VOID start_worker_process(INT servsock, INT eventsnum)
 #ifdef DEBUG
 				printf ("Epoll Error!0x%x\n", events[i].events);  
 #endif
+				epoll_ctl(efd, EPOLL_CTL_DEL, events[i].data.fd, &events[i]);
 				close (events[i].data.fd);  
 				continue;  
 			}  
@@ -198,7 +199,7 @@ VOID start_worker_process(INT servsock, INT eventsnum)
 				{
 					tmp = strstr(hosttmp, "\r\n");
 					memcpy(host, hosttmp + 6, tmp - (hosttmp + 6));
-#ifdef DEBUG
+#ifdef PRINTCONTENT
 					ret = write(1, head, count);  
 					if(ret == -1)  
 					{  
@@ -228,6 +229,7 @@ VOID start_worker_process(INT servsock, INT eventsnum)
 					remotesock = connect_isolate(host, port);
 					if(remotesock == 0)
 					{
+						epoll_ctl(efd, EPOLL_CTL_DEL, events[i].data.fd, &events[i]);
 						close(events[i].data.fd);
 						continue;
 					}
@@ -263,7 +265,7 @@ VOID start_worker_process(INT servsock, INT eventsnum)
 							sockfd_map.erase(pos);
 						}
 #ifdef DEBUG
-						printf("write error!\n");
+						printf("write error	1!\n");
 #endif
 						break;
 					}
@@ -288,7 +290,7 @@ VOID start_worker_process(INT servsock, INT eventsnum)
 							sockfd_map.erase(pos);
 						}
 #ifdef DEBUG
-						printf("write error!\n");
+						printf("write error 2!\n");
 #endif
 						break;
 					}
@@ -322,7 +324,7 @@ VOID start_worker_process(INT servsock, INT eventsnum)
 					}  
 
 					/* Write the buffer to standard output */  
-#ifdef DEBUG
+#ifdef PRINTCONTENT
 					ret = write(1, buf, count);  
 					if(ret == -1)  
 					{  
@@ -349,7 +351,7 @@ VOID start_worker_process(INT servsock, INT eventsnum)
 								sockfd_map.erase(pos);
 							}
 #ifdef DEBUG
-							printf("write error!\n");
+							printf("write error 3!\n");
 #endif
 							break;
 						}
@@ -374,7 +376,7 @@ VOID start_worker_process(INT servsock, INT eventsnum)
 								sockfd_map.erase(pos);
 							}
 #ifdef DEBUG
-							printf("write error!\n");
+							printf("write error 4!\n");
 #endif
 							break;
 						}
