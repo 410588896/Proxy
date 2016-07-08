@@ -7,7 +7,7 @@
  * Return	:
  * PS		:
 ******************************/
-VOID read_conf(CHAR *port, CHAR *size, CHAR *processes, CHAR *listen, CHAR *events)
+VOID read_conf(CHAR *port, CHAR *httpsport, CHAR *size, CHAR *processes, CHAR *listen, CHAR *events)
 {
 	CHAR buffer[256] = {0};  
 	
@@ -29,7 +29,7 @@ VOID read_conf(CHAR *port, CHAR *size, CHAR *processes, CHAR *listen, CHAR *even
 		if(buffer[0] == '#')
 			continue;	
 		
-		if(strstr(buffer, "PORT") != NULL)
+		if(strstr(buffer, "HTTPPORT") != NULL)
 		{
 			CHAR *p_start = NULL;
 			
@@ -42,6 +42,22 @@ VOID read_conf(CHAR *port, CHAR *size, CHAR *processes, CHAR *listen, CHAR *even
 			p_end = strstr(p_start, ";");
 			
 			memcpy(port, p_start, p_end - p_start);
+
+			continue;
+		}
+		else if(strstr(buffer, "HTTPSPORT") != NULL)
+		{
+			CHAR *p_start = NULL;
+			
+			CHAR *p_end = NULL;
+
+			p_start = strstr(buffer, "=");
+			
+			p_start = p_start + 2;
+			
+			p_end = strstr(p_start, ";");
+			
+			memcpy(httpsport, p_start, p_end - p_start);
 
 			continue;
 		}

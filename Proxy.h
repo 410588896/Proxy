@@ -20,6 +20,7 @@
 #include "Type.h"
 
 #define DEFAULT_PROXY_PORT 8080
+#define DEFAULT_HTTPS_PORT 8000
 #define HTTP_PORT 80
 #define DEFAULT_MEMPOOL_SIZE 10240000
 #define MAXLEN 1024

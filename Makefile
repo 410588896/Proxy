@@ -1,5 +1,5 @@
 CC 	= g++
-CFLAGS	= -g -DDEBUG 
+CFLAGS	= -g -DDEBUG -DHTTPS 
 LIBS	= -lz -lssl -lcrypto
 
 FOO := $(wildcard ./*.cpp)
