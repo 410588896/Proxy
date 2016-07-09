@@ -18,8 +18,9 @@
 
 #include "Type.h"
 
-#define CERTF	"cacert.pem" 
-#define KEYF	"privkey.pem"  
+#define SSL_SERVER_RSA_CERT	"./cacert/cacert.pem"
+#define SSL_SERVER_RSA_KEY	"./cacert/privkey.pem"
+
 #define HTTPS_PORT 443
 
 using namespace std;

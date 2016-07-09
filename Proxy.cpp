@@ -448,10 +448,10 @@ INT create_server_socket(INT port, INT listennum)
 	INT server_sock, optval;
 	struct sockaddr_in server_addr;
 
-	if ((server_sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
+	if((server_sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
 		return SERVER_SOCKET_ERROR;
 
-	if (setsockopt(server_sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0) 
+	if(setsockopt(server_sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0) 
 		return SERVER_SETSOCKOPT_ERROR;
 
 	if(fcntl(server_sock, F_SETFL, O_NONBLOCK) < 0)

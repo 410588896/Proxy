@@ -37,12 +37,12 @@ SSL_CTX *SSL_Init()
 		ERR_print_errors_fp(stdout);  
 		exit(1);  
 	}  
-	if(SSL_CTX_use_certificate_file(ctx, CERTF, SSL_FILETYPE_PEM) <= 0)
+	if(SSL_CTX_use_certificate_file(ctx, SSL_SERVER_RSA_CERT, SSL_FILETYPE_PEM) <= 0)
 	{
 		ERR_print_errors_fp(stdout);  
 		exit(1);  
 	}  
-	if(SSL_CTX_use_PrivateKey_file(ctx, KEYF, SSL_FILETYPE_PEM) <= 0) 
+	if(SSL_CTX_use_PrivateKey_file(ctx, SSL_SERVER_RSA_KEY, SSL_FILETYPE_PEM) <= 0) 
 	{  
 		ERR_print_errors_fp(stdout);  
 		exit(1);  
@@ -270,50 +270,38 @@ VOID start_worker_process_ssl(INT sslsock, INT eventsnum, SSL_CTX *ctx)
 								"(host=%s, port=%s)\n", infd, hbuf, sbuf);  
 #endif
 					}  
-			
-					ssl = SSL_new(ctx);  
-					SSL_set_fd(ssl, infd);  
-
-					/* Make the incoming socket non-blocking and add it to the 
-					   list of fds to monitor. */  	 
-					ret = make_socket_non_blocking_ssl(infd);  
-					if(ret == -1)  
+					//CONNECT request
+					CHAR connect[512] = {0};
+					ret = read(infd, connect, sizeof(connect)); 			
+					if(ret == -1)
 					{
 						close(infd);
 						continue;
-					} 
-				//	ret = SSL_accept(ssl);
-while(SSL_accept(ssl) == -1);
-			/*		switch (SSL_get_error(ssl, ret))
-					{
-						case SSL_ERROR_NONE:
-							ret = 0;
-							printf("SSL_ERROR_NONE\n");
-							break; // Done
-
-						case SSL_ERROR_WANT_WRITE:
-							ret = -1;
-							printf("SSL_ERROR_WANT_WRITE\n");
-							break;
-
-						case SSL_ERROR_WANT_READ:
-							ret = 0;
-							printf("SSL_ERROR_WANT_READ\n");
-							break;
-
-						case SSL_ERROR_ZERO_RETURN:
-						case SSL_ERROR_SYSCALL:
-							// The peer has notified us that it is shutting down via
-							// the SSL "close_notify" message so we need to
-							// shutdown, too.
-							printf("heheda\n");
-							ret = -1;
-							break;
-						default:
-							ret = -1;
-							break;
 					}
-					*/
+					memset(connect, 0, sizeof(connect));
+					strcpy(connect, "HTTP/1.1 200 Connection Established\r\n\r\n");
+					ret = write(infd, connect, strlen(connect));
+					if(ret == -1)
+					{
+						close(infd);
+						SSL_shutdown(ssl);  
+						SSL_free(ssl);	 
+						continue;
+					}
+
+					ssl = SSL_new(ctx);  
+					SSL_set_fd(ssl, infd);  
+					/* Make the incoming socket non-blocking and add it to the 
+					   list of fds to monitor. */  	 
+			//		ret = make_socket_non_blocking_ssl(infd);  
+					if(ret == -1)  
+					{
+						close(infd);
+						SSL_shutdown(ssl);  
+						SSL_free(ssl);	  
+						continue;
+					} 
+					ret = SSL_accept(ssl);
 					if(ret == -1)
 					{
 #ifdef DEBUG
@@ -324,6 +312,7 @@ while(SSL_accept(ssl) == -1);
 						SSL_free(ssl);	  
 						continue;  
 					}
+					//judge ret
 					SSLEPOLL *tmp = new SSLEPOLL(ssl, ctx, infd);
 					event.data.ptr = (VOID*)tmp;
 					event.events = EPOLLIN | EPOLLET;  
@@ -358,6 +347,9 @@ while(SSL_accept(ssl) == -1);
 				INT port;
 				count = SSL_read(((SSLEPOLL*)(events[i].data.ptr))->ssl, head, sizeof(head));  
 				printf("###########@@@@@@@:%s\n", head);
+
+				count = SSL_read(((SSLEPOLL*)(events[i].data.ptr))->ssl, head, sizeof(head));  
+				printf("!!!!!!!!!!!!!!1%s\n", head);
 				if(hosttmp = strstr(head, "Host: "))
 				{
 					tmp = strstr(hosttmp, "\r\n");
@@ -467,7 +459,6 @@ while(SSL_accept(ssl) == -1);
 				{  
 					ssize_t count;  
 					CHAR buf[MAXLEN];  
-
 					count = SSL_read(((SSLEPOLL *)(events[i].data.ptr))->ssl, buf, sizeof(buf));  
 					if(count == -1)  
 					{  
