@@ -313,6 +313,14 @@ VOID start_worker_process_ssl(INT sslsock, INT eventsnum, SSL_CTX *ctx)
 						continue;  
 					}
 					//judge ret
+					INT sslerr = SSL_get_error(ssl, ret);
+					if(sslerr != SSL_ERROR_WANT_READ && sslerr != SSL_ERROR_WANT_WRITE)
+					{
+						close(infd);
+						SSL_shutdown(ssl);  
+						SSL_free(ssl);
+						continue;	
+					}
 					SSLEPOLL *tmp = new SSLEPOLL(ssl, ctx, infd);
 					event.data.ptr = (VOID*)tmp;
 					event.events = EPOLLIN | EPOLLET;  
